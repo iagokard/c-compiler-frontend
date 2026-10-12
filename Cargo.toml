@@ -1,0 +1,20 @@
+[package]
+name = "frontend-c-compiler"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+
+[lints.clippy]
+pedantic   = { priority = -1, level = "deny" }
+nursery    = { priority = -1, level = "deny" }
+cargo      = { priority = -1, level = "deny" }
+
+# needless_return = "allow"
+
+# missing_errors_doc = "allow"    # Se não quiser documentar todos os erros
+# missing_panics_doc = "allow"    # Se não quiser documentar todos os panics
+# must_use_candidate = "allow"    # Se não quiser colocar #[must_use] em toda função
+# module_name_repetitions = "allow" # Se não quiser evitar repetição de nomes em módulos
+# similar_names = "allow"         # Se não quiser ser penalizado por nomes parecidos
+# too_many_lines = "allow"        # Se não quiser limite de linhas por função
