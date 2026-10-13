@@ -2,16 +2,16 @@ mod chars;
 mod error;
 mod identifiers;
 mod numbers;
+mod punctuators;
 mod strings;
 
-use crate::token::Token;
+use crate::token::{Span, Token, TokenKind};
 pub use error::LexError;
 
 pub fn lex(src: &str) -> Result<Vec<Token>, LexError> {
     let mut lexer = Lexer::new(src);
     lexer.tokenize()
 }
-
 struct Lexer<'a> {
     src: &'a str,
     position: usize,
@@ -29,12 +29,64 @@ impl<'a> Lexer<'a> {
         }
     }
 
+    fn tokenize(&mut self) -> Result<Vec<Token>, LexError> {
+        let mut tokens = Vec::new();
+
+        loop {
+            let token = self.get_next_token()?;
+            let is_eof = token.kind == TokenKind::EOF;
+
+            tokens.push(token);
+
+            if is_eof {
+                break;
+            }
+        }
+
+        Ok(tokens)
+    }
+
+    fn get_next_token(&mut self) -> Result<Token, LexError> {
+        self.skip_trivia()?;
+
+        let c = match self.peek() {
+            Some(value) => value,
+            None => {
+                return Ok(Token::new(
+                    TokenKind::EOF,
+                    "",
+                    Span {
+                        start: self.position,
+                        end: self.position,
+                    },
+                ));
+            }
+        };
+
+        let next_c = self.peek_next();
+
+        let token = match c {
+            c if c.is_ascii_alphabetic() || c == '_' => self.lex_identifier()?,
+            c if c.is_ascii_digit() => self.lex_number()?,
+            '.' if next_c.is_some_and(|next| next.is_ascii_digit()) => self.lex_number()?,
+            '"' => self.lex_string()?,
+            '\'' => self.lex_char()?,
+            _ => self.lex_punctuator()?,
+        };
+
+        Ok(token)
+    }
+
     fn peek(&self) -> Option<char> {
         self.src[self.position..].chars().next()
     }
 
     fn peek_next(&self) -> Option<char> {
         self.src[self.position..].chars().nth(1)
+    }
+
+    fn peek_ahead(&self, offset: usize) -> Option<char> {
+        self.src[self.position..].chars().nth(offset)
     }
 
     fn bump(&mut self) -> Option<char> {
@@ -66,34 +118,14 @@ impl<'a> Lexer<'a> {
         false
     }
 
-    fn tokenize(&mut self) -> Result<Vec<Token>, LexError> {
-        let mut tokens = Vec::new();
-
-        loop {
-            self.skip_trivia()?;
-
-            let c = match self.peek() {
-                Some(value) => value,
-                None => break,
-            };
-
-            let next_c = self.peek_next();
-
-            let token = match c {
-                c if c.is_ascii_alphabetic() || c == '_' => self.lex_identifier()?,
-                c if c.is_ascii_digit() => self.lex_number()?,
-                '.' if next_c.is_some_and(|next| next.is_ascii_digit()) => self.lex_number()?,
-                '"' => self.lex_string()?,
-                '\'' => self.lex_char()?,
-                _ => {
-                    return Err(LexError::new("Caracter inválido", self.line, self.column));
-                }
-            };
-
-            tokens.push(token);
+    fn eat_any(&mut self, options: &[char]) -> bool {
+        match self.peek() {
+            Some(c) if options.contains(&c) => {
+                self.bump();
+                true
+            }
+            _ => false,
         }
-
-        Ok(tokens)
     }
 
     fn skip_trivia(&mut self) -> Result<(), LexError> {
@@ -144,5 +176,11 @@ impl<'a> Lexer<'a> {
             }
             self.bump();
         }
+    }
+
+    fn matches_at_cursor(&self, s: &str) -> bool {
+        s.chars()
+            .enumerate()
+            .all(|(i, c)| self.peek_ahead(i) == Some(c))
     }
 }

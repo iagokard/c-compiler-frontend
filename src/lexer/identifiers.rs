@@ -42,6 +42,7 @@ impl<'a> Lexer<'a> {
             "break" => Break,
             "case" => Case,
             "char" => Char,
+            "const" => Const,
             "continue" => Continue,
             "default" => Default,
             "do" => Do,

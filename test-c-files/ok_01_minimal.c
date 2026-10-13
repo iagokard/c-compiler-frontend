@@ -1,5 +1,5 @@
 int main(void) {
-  int a;
+  int a; // isso é um comentário
   int x;
 
   a = 3;
