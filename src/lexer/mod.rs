@@ -5,13 +5,17 @@ mod numbers;
 mod punctuators;
 mod strings;
 
-use crate::token::{Span, Token, TokenKind};
+use crate::{
+    symbol_table::SymbolTable,
+    token::{Span, Token, TokenKind},
+};
 pub use error::LexError;
 
-pub fn lex(src: &str) -> Result<Vec<Token>, LexError> {
+pub fn lex(src: &str, symbol_table: &mut SymbolTable) -> Result<Vec<Token>, LexError> {
     let mut lexer = Lexer::new(src);
-    lexer.tokenize()
+    lexer.tokenize(symbol_table)
 }
+
 struct Lexer<'a> {
     src: &'a str,
     position: usize,
@@ -29,11 +33,11 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    fn tokenize(&mut self) -> Result<Vec<Token>, LexError> {
+    fn tokenize(&mut self, symbol_table: &mut SymbolTable) -> Result<Vec<Token>, LexError> {
         let mut tokens = Vec::new();
 
         loop {
-            let token = self.get_next_token()?;
+            let token = self.get_next_token(symbol_table)?;
             let is_eof = token.kind == TokenKind::EOF;
 
             tokens.push(token);
@@ -46,7 +50,7 @@ impl<'a> Lexer<'a> {
         Ok(tokens)
     }
 
-    fn get_next_token(&mut self) -> Result<Token, LexError> {
+    fn get_next_token(&mut self, symbol_table: &mut SymbolTable) -> Result<Token, LexError> {
         self.skip_trivia()?;
 
         let c = match self.peek() {
@@ -66,7 +70,7 @@ impl<'a> Lexer<'a> {
         let next_c = self.peek_next();
 
         let token = match c {
-            c if c.is_ascii_alphabetic() || c == '_' => self.lex_identifier()?,
+            c if c.is_ascii_alphabetic() || c == '_' => self.lex_identifier(symbol_table)?,
             c if c.is_ascii_digit() => self.lex_number()?,
             '.' if next_c.is_some_and(|next| next.is_ascii_digit()) => self.lex_number()?,
             '"' => self.lex_string()?,

@@ -1,10 +1,18 @@
+mod ast;
 mod lexer;
+mod linemap;
+mod semantic;
+mod sintatic;
+mod symbol_table;
 mod token;
 
 use std::env;
 use std::error::Error;
 use std::fs;
 use std::process::ExitCode;
+
+use crate::sintatic::Parser;
+use crate::symbol_table::SymbolTable;
 
 fn main() -> ExitCode {
     // TODO: rever tratamento de erro
@@ -15,14 +23,36 @@ fn main() -> ExitCode {
         Err(err) => return exit_with_error("error reading '{path}'", err),
     };
 
-    let token_list = match lexer::lex(&src) {
+    let mut symbol_table = SymbolTable::new();
+
+    let token_list = match lexer::lex(&src, &mut symbol_table) {
         Ok(value) => value,
         Err(err) => return exit_with_error("", err),
     };
 
-    for token in token_list {
-        println!("{:?}", token);
+    let linemapping = linemap::LineMap::new(&src);
+
+    let ast = match Parser::new(&token_list, &linemapping).parse_program() {
+        Ok(value) => value,
+        Err(err) => {
+            println!("{err}");
+            return ExitCode::FAILURE;
+        }
+    };
+    let errors = semantic::analyze(&ast, &mut symbol_table, &linemapping);
+
+    if errors.is_empty() {
+        println!("\n[OK] análise semântica passou sem erros.");
+    } else {
+        for e in &errors {
+            eprintln!("{e}");
+        }
+        return ExitCode::FAILURE;
     }
+
+    token::display_tokens(&token_list);
+    ast.print(&symbol_table);
+    symbol_table.display();
 
     ExitCode::SUCCESS
 }

@@ -1,6 +1,6 @@
 // Esperado: [ERRO SINTÁTICO] operador '+' inesperado após '+' na linha 1
 
-int main(void) {
+int main() {
   int a = 2;
   int x = a + +5;
 

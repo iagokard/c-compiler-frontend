@@ -1,8 +1,14 @@
 use super::{LexError, Lexer};
-use crate::token::{Span, Token, TokenKind};
+use crate::{
+    symbol_table::SymbolTable,
+    token::{Span, Token, TokenKind},
+};
 
 impl<'a> Lexer<'a> {
-    pub(super) fn lex_identifier(&mut self) -> Result<Token, LexError> {
+    pub(super) fn lex_identifier(
+        &mut self,
+        symbol_table: &mut SymbolTable,
+    ) -> Result<Token, LexError> {
         let start = self.position;
 
         self.bump();
@@ -15,7 +21,7 @@ impl<'a> Lexer<'a> {
         }
 
         let lexeme = &self.src[start..self.position];
-        let kind = Self::get_identifier_kind(lexeme);
+        let kind = self.get_identifier_kind(lexeme, symbol_table);
 
         Ok(Token::new(
             kind,
@@ -27,10 +33,14 @@ impl<'a> Lexer<'a> {
         ))
     }
 
-    fn get_identifier_kind(lexeme: &str) -> TokenKind {
+    fn get_identifier_kind(&self, lexeme: &str, symbol_table: &mut SymbolTable) -> TokenKind {
         match Self::keyword_token(lexeme) {
             Some(value) => value,
-            None => TokenKind::Identifier(lexeme.into()),
+            None => {
+                symbol_table.record(lexeme, self.line, self.column);
+                let index = symbol_table.get_index(lexeme).unwrap();
+                TokenKind::Identifier(*index)
+            }
         }
     }
 
