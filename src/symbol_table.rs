@@ -10,10 +10,7 @@ pub enum DataType {
     Void,
     Long,
     Short,
-    Signed,
-    Unsigned,
     String,
-    Unknown,
 }
 
 #[derive(Debug, Clone)]
@@ -53,24 +50,6 @@ impl SymbolTable {
         self.index.insert(name.to_string(), index);
     }
 
-    pub fn declare(&mut self, name: &str, data_type: DataType) -> bool {
-        if let Some(&index) = self.index.get(name) {
-            let symbol = &mut self.entries[index];
-            symbol.data_type = Some(data_type);
-            symbol.declared = true;
-            true
-        } else {
-            false
-        }
-    }
-
-    pub fn is_declared(&self, name: &str) -> bool {
-        self.index
-            .get(name)
-            .map(|&idx| self.entries[idx].declared)
-            .unwrap_or(false)
-    }
-
     pub fn declare_at(&mut self, index: usize, data_type: DataType) {
         let symbol = &mut self.entries[index];
         symbol.data_type = Some(data_type);
@@ -85,16 +64,8 @@ impl SymbolTable {
         self.entries[index].data_type
     }
 
-    pub fn get_symbol(&self, name: &str) -> Option<&Symbol> {
-        self.index.get(name).map(|&index| &self.entries[index])
-    }
-
     pub fn get_index(&self, name: &str) -> Option<&usize> {
         self.index.get(name)
-    }
-
-    pub fn iter(&self) -> impl Iterator<Item = &Symbol> {
-        self.entries.iter()
     }
 
     pub fn name_of(&self, index: usize) -> &str {
@@ -107,19 +78,87 @@ impl SymbolTable {
             return;
         }
 
-        println!("╔════╦══════════════════════╦════════════╦════════╗");
-        println!("║ #  ║ Nome                 ║ Tipo       ║ Linha  ║");
-        println!("╠════╬══════════════════════╬════════════╬════════╣");
-        for (i, symbol) in self.entries.iter().enumerate() {
-            let data_type = symbol
-                .data_type
-                .map(|t| format!("{:?}", t))
-                .unwrap_or_else(|| "-".to_string());
-            println!(
-                "║ {:<2} ║ {:<20} ║ {:<10} ║ {:<6} ║",
-                i, symbol.name, data_type, symbol.line
-            );
+        const HEADERS: [&str; 5] = ["#", "Nome", "Tipo", "Linha", "Coluna"];
+        const RIGHT_ALIGNED: [bool; 5] = [true, false, false, true, true];
+
+        let rows: Vec<[String; 5]> = self
+            .entries
+            .iter()
+            .enumerate()
+            .map(|(i, symbol)| {
+                let data_type = symbol
+                    .data_type
+                    .map(|t| format!("{t:?}"))
+                    .unwrap_or_else(|| "-".to_string());
+                [
+                    i.to_string(),
+                    symbol.name.clone(),
+                    data_type,
+                    symbol.line.to_string(),
+                    symbol.column.to_string(),
+                ]
+            })
+            .collect();
+
+        let mut widths = [0usize; 5];
+        for (w, h) in widths.iter_mut().zip(HEADERS.iter()) {
+            *w = h.chars().count();
         }
-        println!("╚════╩══════════════════════╩════════════╩════════╝");
+        for row in &rows {
+            for (w, cell) in widths.iter_mut().zip(row.iter()) {
+                *w = (*w).max(cell.chars().count());
+            }
+        }
+
+        let fmt_cell = |cell: &str, w: usize, right: bool| -> String {
+            if right {
+                format!("{cell:>w$}", w = w)
+            } else {
+                format!("{cell:<w$}", w = w)
+            }
+        };
+
+        let border = |l: &str, m: &str, r: &str| -> String {
+            let mut s = String::from(l);
+            for (i, w) in widths.iter().enumerate() {
+                if i > 0 {
+                    s.push_str(m);
+                }
+                s.push_str(&"═".repeat(w + 2));
+            }
+            s.push_str(r);
+            s
+        };
+
+        let total: usize = widths.iter().map(|w| w + 2).sum::<usize>() + (widths.len() - 1);
+
+        println!("{}", border("╔", "╦", "╗"));
+
+        let title = "TABELA DE SÍMBOLOS";
+        let pad = total.saturating_sub(title.chars().count());
+        let lp = pad / 2;
+        let rp = pad - lp;
+        println!("║{}{}{}║", " ".repeat(lp), title, " ".repeat(rp));
+
+        println!("{}", border("╠", "╬", "╣"));
+
+        print!("║");
+        for (i, (w, h)) in widths.iter().zip(HEADERS.iter()).enumerate() {
+            print!(" {} ║", fmt_cell(h, *w, RIGHT_ALIGNED[i]));
+        }
+        println!();
+
+        println!("{}", border("╠", "╬", "╣"));
+
+        for row in &rows {
+            print!("║");
+            for (i, (w, cell)) in widths.iter().zip(row.iter()).enumerate() {
+                print!(" {} ║", fmt_cell(cell, *w, RIGHT_ALIGNED[i]));
+            }
+            println!();
+        }
+
+        println!("{}", border("╚", "╩", "╝"));
+        println!("Total: {} símbolo(s).", self.entries.len());
     }
 }

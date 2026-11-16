@@ -1,10 +1,6 @@
-// src/ast.rs
 use crate::symbol_table::{DataType, SymbolTable};
 use crate::token::Span;
 
-// ════════════════════════════════════════════════════════════
-// Definições do enum — ISSO FALTAVA
-// ════════════════════════════════════════════════════════════
 #[derive(Debug, Clone, Copy)]
 pub enum BinOp {
     Add,
@@ -166,6 +162,28 @@ impl AstNode {
             | AstNode::IntLiteral(..)
             | AstNode::FloatLiteral(..)
             | AstNode::StringLiteral(..) => vec![],
+        }
+    }
+
+    pub fn span(&self) -> Span {
+        match self {
+            AstNode::IntLiteral(_, s)
+            | AstNode::FloatLiteral(_, s)
+            | AstNode::StringLiteral(_, s)
+            | AstNode::Identifier(_, s) => *s,
+
+            AstNode::BinaryOp { span, .. }
+            | AstNode::Assignment { span, .. }
+            | AstNode::Declaration { span, .. }
+            | AstNode::FunctionDef { span, .. } => *span,
+
+            AstNode::Program(items) => match (items.first(), items.last()) {
+                (Some(first), Some(last)) => Span {
+                    start: first.span().start,
+                    end: last.span().end,
+                },
+                _ => Span { start: 0, end: 0 },
+            },
         }
     }
 }

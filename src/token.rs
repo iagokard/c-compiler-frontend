@@ -130,26 +130,6 @@ impl Token {
             span,
         }
     }
-
-    fn render_row(&self, index: usize) -> String {
-        let value = self.kind.display_value();
-        let shown = if value.is_empty() {
-            format!("{:?}", self.lexeme) // ex.: "\"+\"" vira "+"
-        } else {
-            value
-        };
-        let category = self.kind.category();
-
-        format!(
-            "│ {:<3} │ {:<20} │ {:<26} │ {:<18} │ {:>4}..{:<4} │",
-            index,
-            category,
-            shown,
-            token_name(&self.kind),
-            self.span.start,
-            self.span.end,
-        )
-    }
 }
 
 impl TokenKind {
@@ -161,51 +141,42 @@ impl TokenKind {
             TokenKind::CharLiteral(c) => format!("{c:?}"),
             TokenKind::StringLiteral(s) => format!("{s:?}"),
             TokenKind::EOF => "<EOF>".to_string(),
-            _ => String::new(), // o lexema cobre
+            _ => String::new(),
         }
     }
 
     pub fn category(&self) -> &'static str {
         use TokenKind::*;
         match self {
-            // ── palavras reservadas (C89/C99/C11/C23) ──
             Auto | Break | Case | Char | Const | Continue | Default | Do | Double | Else | Enum
             | Extern | Float | For | Goto | If | Inline | Int | Long | Register | Restrict
             | Return | Short | Signed | Sizeof | Static | Struct | Switch | Typedef | Union
             | Unsigned | Void | Volatile | While | Alignas | Alignof | Atomic | Bool | Complex
             | Generic | Imaginary | Noreturn | StaticAssert | ThreadLocal => "Palavra Reservada",
 
-            // ── literais e identificador ──
             Identifier(_) => "Identificador",
             IntLiteral(_) => "Literal Inteiro",
             FloatLiteral(_) => "Literal Float",
             CharLiteral(_) => "Literal Char",
             StringLiteral(_) => "Literal String",
 
-            // ── operadores aritméticos ──
             Plus | Minus | Star | Slash | Percent | Increment | Decrement => "Operador Aritmético",
 
-            // ── relacionais ──
             Equal | NotEqual | Less | Greater | LessEqual | GreaterEqual => "Operador Relacional",
 
-            // ── lógicos ──
             LogicalAnd | LogicalOr | LogicalNot => "Operador Lógico",
 
-            // ── bitwise ──
             BitwiseAnd | BitwiseOr | BitwiseXor | BitwiseNot | ShiftLeft | ShiftRight => {
                 "Operador Bitwise"
             }
 
-            // ── atribuição ──
             Assign | PlusAssign | MinusAssign | StarAssign | SlashAssign | PercentAssign
             | ShiftLeftAssign | ShiftRightAssign | BitwiseAndAssign | BitwiseOrAssign
             | BitwiseXorAssign => "Operador Atribuição",
 
-            // ── pontuação (inclui Hash, Arrow, Dot e os demais) ──
             Hash | Arrow | Dot | Question | Colon | Comma | Ellipsis | Semicolon | LParen
             | RParen | LBracket | RBracket | LBrace | RBrace => "Pontuação",
 
-            // ── fim ──
             EOF => "Fim de Arquivo",
         }
     }
@@ -220,14 +191,12 @@ fn token_name(kind: &TokenKind) -> String {
 }
 
 pub fn display_tokens(tokens: &[Token]) {
-    // ── larguras de conteúdo ──────────────────────────────
     const NUM_W: usize = 3;
     const CAT_W: usize = 20;
     const VAL_W: usize = 26;
     const TOK_W: usize = 18;
-    const SPAN_W: usize = 10; // "1234..5678"
+    const SPAN_W: usize = 10;
 
-    // larguras *entre pipes* = conteúdo + 2 (padding)
     const NW: usize = NUM_W + 2; // 5
     const CW: usize = CAT_W + 2; // 22
     const VW: usize = VAL_W + 2; // 28
@@ -237,7 +206,6 @@ pub fn display_tokens(tokens: &[Token]) {
     const CELLS: [usize; 5] = [NW, CW, VW, TW, SW];
     const TOTAL: usize = NW + CW + VW + TW + SW + 4; // +4 pipes internos
 
-    // gera qualquer linha de borda (topo, meio, base)
     let border = |l: &str, m: &str, r: &str| -> String {
         let mut s = String::from(l);
         for (i, w) in CELLS.iter().enumerate() {
@@ -250,20 +218,16 @@ pub fn display_tokens(tokens: &[Token]) {
         s
     };
 
-    // ── topo ──
     println!("{}", border("╔", "╦", "╗"));
 
-    // ── título centralizado ──
     let title = "LISTA DE TOKENS";
     let pad = TOTAL.saturating_sub(title.chars().count());
     let lp = pad / 2;
     let rp = pad - lp;
     println!("║{}{}{}║", " ".repeat(lp), title, " ".repeat(rp));
 
-    // ── separador ──
     println!("{}", border("╠", "╬", "╣"));
 
-    // ── cabeçalho ──
     println!(
         "║ {:<nw$} ║ {:<cw$} ║ {:<vw$} ║ {:<tw$} ║ {:^sw$} ║",
         "#",
@@ -278,10 +242,8 @@ pub fn display_tokens(tokens: &[Token]) {
         sw = SPAN_W
     );
 
-    // ── separador ──
     println!("{}", border("╠", "╬", "╣"));
 
-    // ── linhas ──
     for (i, tok) in tokens.iter().enumerate() {
         let raw = tok.kind.display_value();
         let shown = if raw.is_empty() {
@@ -308,7 +270,6 @@ pub fn display_tokens(tokens: &[Token]) {
         );
     }
 
-    // ── base ──
     println!("{}", border("╚", "╩", "╝"));
     println!("Total: {} tokens.", tokens.len());
 }

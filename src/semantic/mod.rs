@@ -1,41 +1,10 @@
-use std::fmt;
+mod error;
 
 use crate::ast::{AstNode, BinOp};
 use crate::linemap::LineMap;
 use crate::symbol_table::{DataType, SymbolTable};
-use crate::token::Span;
 
-#[derive(Debug)]
-pub struct SemanticError {
-    pub message: String,
-    pub span: Span,
-    pub line: usize,
-    pub column: usize,
-}
-
-impl SemanticError {
-    pub fn new(message: impl Into<String>, span: Span, linemap: &LineMap) -> Self {
-        let (line, column) = linemap.location(span.start);
-        Self {
-            message: message.into(),
-            span,
-            line,
-            column,
-        }
-    }
-}
-
-impl fmt::Display for SemanticError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "[ERRO SEMÂNTICO] {} (linha {}, coluna {})",
-            self.message, self.line, self.column
-        )
-    }
-}
-
-impl std::error::Error for SemanticError {}
+pub use error::SemanticError;
 
 pub fn analyze(ast: &AstNode, symbols: &mut SymbolTable, linemap: &LineMap) -> Vec<SemanticError> {
     let mut errors = Vec::new();
@@ -167,7 +136,6 @@ fn infer_type(node: &AstNode, symbols: &SymbolTable) -> Option<DataType> {
             let r = infer_type(right, symbols)?;
             Some(promote(l, r, *op))
         }
-        // Declaração, atribuição, função não são expressões.
         _ => None,
     }
 }
@@ -204,9 +172,6 @@ fn type_name(t: DataType) -> &'static str {
         DataType::Void => "void",
         DataType::Long => "long",
         DataType::Short => "short",
-        DataType::Signed => "signed",
-        DataType::Unsigned => "unsigned",
         DataType::String => "String",
-        DataType::Unknown => "?",
     }
 }

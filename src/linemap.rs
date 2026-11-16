@@ -31,8 +31,4 @@ impl LineMap {
         let col = chars.partition_point(|&b| b < offset) + 1;
         (line, col)
     }
-
-    pub fn span_location(&self, span: crate::token::Span) -> (usize, usize) {
-        self.location(span.start)
-    }
 }

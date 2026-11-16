@@ -1,8 +1,9 @@
 mod ast;
+mod exporter;
 mod lexer;
 mod linemap;
+mod parser;
 mod semantic;
-mod sintatic;
 mod symbol_table;
 mod token;
 
@@ -11,7 +12,7 @@ use std::error::Error;
 use std::fs;
 use std::process::ExitCode;
 
-use crate::sintatic::Parser;
+use crate::parser::Parser;
 use crate::symbol_table::SymbolTable;
 
 fn main() -> ExitCode {
@@ -53,6 +54,17 @@ fn main() -> ExitCode {
     token::display_tokens(&token_list);
     ast.print(&symbol_table);
     symbol_table.display();
+
+    exporter::export_html(
+        "result.html",
+        &token_list,
+        &ast,
+        &symbol_table,
+        &linemapping,
+    )
+    .unwrap();
+
+    exporter::export_txt("result.txt", &token_list, &ast, &symbol_table, &linemapping).unwrap();
 
     ExitCode::SUCCESS
 }
